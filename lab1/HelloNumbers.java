@@ -4,8 +4,8 @@ public class HelloNumbers {
         int y = 0;
         while (x < 10) {
         	y = y + x;
-        	x = x + 1;
             System.out.println(y + " ");
+            x = x + 1;
         }
     }
 }
