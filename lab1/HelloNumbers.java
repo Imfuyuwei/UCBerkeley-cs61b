@@ -6,7 +6,6 @@ public class HelloNumbers {
         	y = y + x;
             System.out.println(y + " ");
             x = x + 1;
-            
         }
     }
 }
