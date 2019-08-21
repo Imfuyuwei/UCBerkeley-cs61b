@@ -78,7 +78,7 @@ public class KDTree implements PointSet {
 
         Node good_side;
         Node bad_side;
-        
+
         if (comparePoints(goal, n.p, n.orientation) < 0) {
             good_side = n.leftChild;
         } else {
@@ -91,6 +91,8 @@ public class KDTree implements PointSet {
         } else {
             bad_side = n.leftChild;
         }
+
+        // If there is any point at the bad side that is worth looking, check it to update the best.
         if (bad_side == null || simplified_distance_to_badSide(goal, n) <= Point.distance(goal, best.p)) {
             best = nearest_node(bad_side, goal, best);
         }

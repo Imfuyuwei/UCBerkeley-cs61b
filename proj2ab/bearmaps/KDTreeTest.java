@@ -8,7 +8,7 @@ import java.util.Random;
 import edu.princeton.cs.algs4.Stopwatch;
 
 public class KDTreeTest {
-    private static Random rd = new Random(500);
+    private static Random rd = new Random(100);
 
     private Point generateRandomPoint() {
         double x = rd.nextDouble();
