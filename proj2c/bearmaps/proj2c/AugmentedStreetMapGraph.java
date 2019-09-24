@@ -3,22 +3,58 @@ package bearmaps.proj2c;
 import bearmaps.hw4.streetmap.Node;
 import bearmaps.hw4.streetmap.StreetMapGraph;
 import bearmaps.proj2ab.Point;
+import bearmaps.proj2ab.WeirdPointSet;
+import bearmaps.lab9_for_proj2C.MyTrieSet;
 
 import java.util.*;
 
 /**
- * An augmented graph that is more powerful that a standard StreetMapGraph.
+ * An augmented graph that is more powerful than a standard StreetMapGraph.
  * Specifically, it supports the following additional operations:
  *
  *
  * @author Alan Yao, Josh Hug, ________
  */
 public class AugmentedStreetMapGraph extends StreetMapGraph {
+    private Map<Point, Long> point_to_id;
+    private WeirdPointSet weirdPointSet;
+    private MyTrieSet trieSet;
+    private Map<String, List<Node>> cleaned_name_to_nodes;
+
+
 
     public AugmentedStreetMapGraph(String dbPath) {
         super(dbPath);
         // You might find it helpful to uncomment the line below:
-        // List<Node> nodes = this.getNodes();
+        List<Node> nodes = this.getNodes();
+        List<Point> points = new LinkedList<>();
+
+        point_to_id = new HashMap<>();
+        trieSet = new MyTrieSet();
+        cleaned_name_to_nodes = new HashMap<>();
+
+        for (Node n : nodes) {
+            if (n.name() != null) {
+                String cleaned_name = cleanString(n.name());
+                trieSet.add(cleaned_name);
+
+                if (!cleaned_name_to_nodes.containsKey(cleaned_name)) {
+                    cleaned_name_to_nodes.put(cleaned_name, new LinkedList<>());
+                }
+
+                List<Node> nodesList = cleaned_name_to_nodes.get(cleaned_name);
+                nodesList.add(n);
+                cleaned_name_to_nodes.put(cleaned_name, nodesList);
+            }
+
+
+            if (!neighbors(n.id()).isEmpty()) {
+                Point p = new Point(n.lon(), n.lat());
+                points.add(p);
+                point_to_id.put(p, n.id());
+            }
+        }
+        weirdPointSet = new WeirdPointSet(points);
     }
 
 
@@ -30,7 +66,8 @@ public class AugmentedStreetMapGraph extends StreetMapGraph {
      * @return The id of the node in the graph closest to the target.
      */
     public long closest(double lon, double lat) {
-        return 0;
+        Point closest_point = weirdPointSet.nearest(lon, lat);
+        return point_to_id.get(closest_point);
     }
 
 
@@ -43,7 +80,17 @@ public class AugmentedStreetMapGraph extends StreetMapGraph {
      * cleaned <code>prefix</code>.
      */
     public List<String> getLocationsByPrefix(String prefix) {
-        return new LinkedList<>();
+        String cleaned_prefix = cleanString(prefix);
+        List<String> cleaned_names_with_prefix = trieSet.keysWithPrefix(cleaned_prefix);
+        List<String> locations_with_prefix = new ArrayList<>();
+
+        for (String name : cleaned_names_with_prefix) {
+            List<Node> nodes_with_this_cleaned_name = cleaned_name_to_nodes.get(name);
+            for (Node n : nodes_with_this_cleaned_name) {
+                locations_with_prefix.add(n.name());
+            }
+        }
+        return locations_with_prefix;
     }
 
     /**
@@ -60,7 +107,20 @@ public class AugmentedStreetMapGraph extends StreetMapGraph {
      * "id" -> Number, The id of the node. <br>
      */
     public List<Map<String, Object>> getLocations(String locationName) {
-        return new LinkedList<>();
+        List<Map<String, Object>> locations = new ArrayList<>();
+        String cleaned_location_name = cleanString(locationName);
+        if (cleaned_name_to_nodes.containsKey(cleaned_location_name)) {
+            List<Node> nodes_with_this_cleaned_name = cleaned_name_to_nodes.get(cleaned_location_name);
+            for (Node n : nodes_with_this_cleaned_name) {
+                Map<String, Object> location = new HashMap<>();
+                location.put("lat", n.lat());
+                location.put("lon", n.lon());
+                location.put("name", n.name());
+                location.put("id", n.id());
+                locations.add(location);
+            }
+        }
+        return locations;
     }
 
 

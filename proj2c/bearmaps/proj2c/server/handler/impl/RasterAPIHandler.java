@@ -17,8 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static bearmaps.proj2c.utils.Constants.SEMANTIC_STREET_GRAPH;
-import static bearmaps.proj2c.utils.Constants.ROUTE_LIST;
+import static bearmaps.proj2c.utils.Constants.*;
 
 /**
  * Handles requests from the web browser for map images. These images
@@ -84,12 +83,76 @@ public class RasterAPIHandler extends APIRouteHandler<Map<String, Double>, Map<S
      */
     @Override
     public Map<String, Object> processRequest(Map<String, Double> requestParams, Response response) {
-        //System.out.println("yo, wanna know the parameters given by the web browser? They are:");
-        //System.out.println(requestParams);
+//        System.out.println("yo, wanna know the parameters given by the web browser? They are:");
+//        System.out.println(requestParams);
         Map<String, Object> results = new HashMap<>();
-        System.out.println("Since you haven't implemented RasterAPIHandler.processRequest, nothing is displayed in "
-                + "your browser.");
+//        System.out.println("Since you haven't implemented RasterAPIHandler.processRequest, nothing is displayed in "
+//                + "your browser.");
+
+        double lrlon = requestParams.get("lrlon");
+        double ullon = requestParams.get("ullon");
+        double w = requestParams.get("w");
+        double h = requestParams.get("h");
+        double ullat = requestParams.get("ullat");
+        double lrlat = requestParams.get("lrlat");
+
+        // Corner case: No coverage
+        if (lrlon <= ROOT_ULLON || lrlat >= ROOT_ULLAT || ullon >= ROOT_LRLON || ullat <= ROOT_LRLAT ||
+                lrlat >= ullat || lrlon <= ullon || w <= 0 || h <= 0) {
+            results.put("query_success", false);
+            return results;
+        }
+
+        double required_lonDPP = get_lonDPP(ullon, lrlon, w);
+        int depth = getDepth(required_lonDPP);
+
+        double lonDisPerTile = (ROOT_LRLON - ROOT_ULLON) / Math.pow(2, depth);
+        double latDisPerTile = (ROOT_ULLAT - ROOT_LRLAT) / Math.pow(2, depth);
+
+        int x_start = (int) Math.max(0, Math.floor((ullon - ROOT_ULLON) / lonDisPerTile));
+        int x_end = (int) Math.min(Math.pow(2, depth), Math.ceil((lrlon - ROOT_ULLON) / lonDisPerTile));
+        int y_start = (int) Math.max(0, Math.floor((ROOT_ULLAT - ullat) / latDisPerTile));
+        int y_end = (int) Math.min(Math.pow(2, depth), Math.ceil((ROOT_ULLAT - lrlat) / latDisPerTile));
+
+        int num_of_rows = y_end - y_start;
+        int num_of_cols = x_end - x_start;
+        String[][] render_grid = new String[num_of_rows][num_of_cols];
+
+
+        for (int i = 0; i < num_of_rows; i++) {
+            for (int j = 0; j < num_of_cols; j++) {
+                render_grid[i][j] = "d" + depth + "_x" + (x_start + j) + "_y" + (y_start + i) + ".png";
+            }
+        }
+
+        double raster_ul_lon = Math.max(ROOT_ULLON, ROOT_ULLON + x_start * lonDisPerTile);
+        double raster_ul_lat = Math.min(ROOT_ULLAT, ROOT_ULLAT - y_start * latDisPerTile);
+        double raster_lr_lon = Math.min(ROOT_LRLON, ROOT_ULLON + x_end * lonDisPerTile);
+        double raster_lr_lat = Math.max(ROOT_LRLAT, ROOT_ULLAT - y_end * latDisPerTile);
+
+        results.put("render_grid", render_grid);
+        results.put("raster_ul_lon", raster_ul_lon);
+        results.put("raster_ul_lat", raster_ul_lat);
+        results.put("raster_lr_lon", raster_lr_lon);
+        results.put("raster_lr_lat", raster_lr_lat);
+        results.put("depth", depth);
+        results.put("query_success", true);
+
         return results;
+    }
+
+    private int getDepth(double required_lonDPP) {
+        int depth = 0;
+        double lonDPP = (ROOT_LRLON - ROOT_ULLON) / TILE_SIZE;
+        while (lonDPP > required_lonDPP && depth < 7) {
+            lonDPP /= 2;
+            depth += 1;
+        }
+        return depth;
+    }
+
+    private double get_lonDPP(double ullon, double lrlon, double w) {
+        return (lrlon - ullon) / w;
     }
 
     @Override
